@@ -197,7 +197,7 @@ impl Emu {
             }
 
             (0xA, _, _, _) => {
-                print!("Executando ANNN: set_i_to_nnn()");
+                println!("Executando ANNN: set_i_to_nnn()");
                 let nnn = op & 0xFFF;
                 self.i_reg = nnn;
                 self.p_counter += 2;
