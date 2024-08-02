@@ -100,10 +100,10 @@ impl Emu {
     }
 
     pub fn tick(&mut self) {
-        // Carregar opcodes
+        // Carregar e decifrar opcodes
         let op = self.fetch();
 
-        // Decifrar opcodes e executar instruções
+        // Executar instruções
         self.execute(op);
     }
 
@@ -123,12 +123,14 @@ impl Emu {
 
         let mut encoded_op = &data[..];
         let op = encoded_op.read_u16::<BigEndian>().unwrap();
-
+        
+        /*
         if op != 0 {
             println!("{:#06x}", op);
         }
+        */
 
-        self.p_counter += 2;
+        //self.p_counter += 2;
         op
     }
 
@@ -147,6 +149,69 @@ impl Emu {
     }
 
     fn execute(&mut self, op: u16) {
-        //TODO
+        let digit1 = (op & 0xF000) >> 12;
+        let digit2 = (op & 0x0F00) >> 8;
+        let digit3 = (op & 0x00F0) >> 4;
+        let digit4 = op & 0x000F;
+
+        match (digit1, digit2, digit3, digit4) {
+            (0, 0, 0, 0,) => return,
+
+            (0, 0, 0xE, 0) => {
+                println!("Executando 00E0: clear_screen()");
+                self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
+                self.p_counter += 2;
+            }
+
+            (0, 0, 0xE, 0xE) => {
+                println!("Executando 00E0: return()");
+                self.pop();
+            }
+
+            (1, _, _, _) => {
+                println!("Executando 1NNN: jump()");
+                let nnn = op & 0xFFF;
+                self.p_counter = nnn;
+            }
+
+            (2, _, _, _) => {
+                println!("Executando 2NNN: call_subroutine()"); 
+                let nnn = op & 0xFFF;
+                self.push(nnn);
+            }
+
+            (6, _, _, _) => {
+                println!("Executando 6XNN: set_vx_to_nn()");
+                let nn = (op & 0xFF) as u8;
+                let vx = digit2 as usize;
+                self.v_reg[vx] = nn;
+                self.p_counter += 2;
+            }
+
+            (7, _, _, _) => {
+                println!("Executando 7XNN: add_nn_to_vx()");
+                let nn = (op & 0xFF) as u8;
+                let vx = digit2 as usize;
+                self.v_reg[vx] += nn;
+                self.p_counter += 2;
+            }
+
+            (0xA, _, _, _) => {
+                print!("Executando ANNN: set_i_to_nnn()");
+                let nnn = op & 0xFFF;
+                self.i_reg = nnn;
+                self.p_counter += 2;
+            }
+
+            (0xD, _, _, _) => {
+                println!("Executando DXYN: draw_sprite()");
+                self.p_counter += 2;
+            }
+
+            (_, _, _, _) => {
+                //self.p_counter += 2;
+                unimplemented!("Opcode: {:#06x} não implementado....", op);
+            }
+        }
     }
 }
